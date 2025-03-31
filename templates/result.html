@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prediction Result</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body { padding: 20px; }
+        .container { max-width: 800px; }
+        .result-box {
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .positive {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        .negative {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="mb-4">Heart Disease Prediction Result</h2>
+        
+        <div class="card">
+            <div class="card-header">
+                <strong>Patient ID:</strong> {{ patient_id }}
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">Prediction</h5>
+                <div class="result-box {% if 'does not' in prediction %}negative{% else %}positive{% endif %}">
+                    <p class="card-text">{{ prediction }}</p>
+                </div>
+                <a href="{{ url_for('home') }}" class="btn btn-primary">Make Another Prediction</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, jsonify
 import pickle
 import numpy as np
 import os
+from dotenv import load_dotenv
+load_dotenv()
 # Add email functionality
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -41,9 +43,9 @@ validation_ranges = {
 }
 
 # Email configuration
-EMAIL_SENDER = "penguine.dc123@gmail.com"
+EMAIL_SENDER = os.getenv("EMAIL")
 # This should be an app password, not your regular Gmail password
-EMAIL_PASSWORD = "kloxivfmhgsxpzfs"
+EMAIL_PASSWORD = os.getenv("PASSWORD")
 DOCTOR_EMAIL = "s.f.meisser87@gmail.com"
 
 def get_recommendations(probability, prediction, features):

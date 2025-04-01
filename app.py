@@ -1,11 +1,14 @@
-from flask import Flask, request, render_template
+from flask import Flask, render_template, request, jsonify
 import pickle
 import numpy as np
+import os
 
 app = Flask(__name__)
 
-# Load the saved model
-model = pickle.load(open('heart_disease_model.pkl', 'rb'))
+# Load the model
+model_path = os.path.join(os.path.dirname(__file__), 'heart_disease_model.pkl')
+with open(model_path, 'rb') as f:
+    model = pickle.load(f)
 
 @app.route('/')
 def home():
@@ -13,34 +16,23 @@ def home():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    # Get form data
-    patient_id = request.form.get('patient_id')
-    age = int(request.form.get('age'))
-    sex = int(request.form.get('sex'))
-    cp = int(request.form.get('cp'))
-    trestbps = int(request.form.get('trestbps'))
-    chol = int(request.form.get('chol'))
-    fbs = int(request.form.get('fbs'))
-    restecg = int(request.form.get('restecg'))
-    thalach = int(request.form.get('thalach'))
-    exang = int(request.form.get('exang'))
-    oldpeak = float(request.form.get('oldpeak'))
-    slope = int(request.form.get('slope'))
-    ca = int(request.form.get('ca'))
-    
-    # Create input array for prediction (excluding patient_id)
-    input_data = (age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca)
-    input_data_as_numpy_array = np.asarray(input_data)
-    input_data_reshaped = input_data_as_numpy_array.reshape(1, -1)
+    # Get form data (excluding patient ID)
+    features = []
+    for feature in model.feature_names_in_:
+        features.append(float(request.form.get(feature)))
     
     # Make prediction
-    prediction = model.predict(input_data_reshaped)
+    features_array = np.array([features])
+    prediction = model.predict(features_array)[0]
+    probability = model.predict_proba(features_array)[0][1]
     
-    result = "The patient has heart disease" if prediction[0] == 1 else "The patient does not have heart disease"
+    result = {
+        'prediction': int(prediction),
+        'probability': float(probability),
+        'message': 'High risk of heart disease' if prediction == 1 else 'Low risk of heart disease'
+    }
     
-    return render_template('result.html', prediction=result, patient_id=patient_id)
+    return jsonify(result)
 
 if __name__ == '__main__':
-    print('* Heart Disease Prediction App is running!')
-    print('* Open your web browser and navigate to: http://127.0.0.1:5000/')
     app.run(debug=True)

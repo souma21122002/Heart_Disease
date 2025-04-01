@@ -1,112 +1,128 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Heart Disease Prediction</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        body { padding: 20px; }
-        .container { max-width: 800px; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="container">
-        <h2 class="mb-4">Heart Disease Prediction</h2>
-        <form action="{{ url_for('predict') }}" method="post">
+        <h1>Heart Disease Prediction</h1>
+        <p>Enter the patient information below to predict heart disease risk.</p>
+        <p class="note">Note: Patient ID is for your reference only and not used in prediction.</p>
+        
+        <form id="prediction-form">
             <div class="form-group">
-                <label for="patient_id">Patient ID:</label>
-                <input type="text" class="form-control" id="patient_id" name="patient_id" required>
+                <label for="patientid">Patient ID (for reference only):</label>
+                <input type="text" id="patientid" name="patientid">
             </div>
             
             <div class="form-group">
                 <label for="age">Age:</label>
-                <input type="number" class="form-control" id="age" name="age" required min="1" max="120">
+                <input type="number" id="age" name="age" required>
             </div>
             
             <div class="form-group">
-                <label for="sex">Sex:</label>
-                <select class="form-control" id="sex" name="sex" required>
-                    <option value="1">Male (1)</option>
-                    <option value="0">Female (0)</option>
+                <label for="gender">Gender:</label>
+                <select id="gender" name="gender" required>
+                    <option value="">Select</option>
+                    <option value="1">Male</option>
+                    <option value="0">Female</option>
                 </select>
             </div>
             
             <div class="form-group">
-                <label for="cp">Chest Pain Type:</label>
-                <select class="form-control" id="cp" name="cp" required>
-                    <option value="0">Typical Angina (0)</option>
-                    <option value="1">Atypical Angina (1)</option>
-                    <option value="2">Non-anginal Pain (2)</option>
-                    <option value="3">Asymptomatic (3)</option>
+                <label for="chestpain">Chest Pain Type:</label>
+                <select id="chestpain" name="chestpain" required>
+                    <option value="">Select</option>
+                    <option value="1">Typical Angina</option>
+                    <option value="2">Atypical Angina</option>
+                    <option value="3">Non-anginal Pain</option>
+                    <option value="4">Asymptomatic</option>
                 </select>
             </div>
             
             <div class="form-group">
-                <label for="trestbps">Resting Blood Pressure (mm Hg):</label>
-                <input type="number" class="form-control" id="trestbps" name="trestbps" required>
+                <label for="restingBP">Resting Blood Pressure (mm Hg):</label>
+                <input type="number" id="restingBP" name="restingBP" required>
             </div>
             
             <div class="form-group">
-                <label for="chol">Serum Cholesterol (mg/dl):</label>
-                <input type="number" class="form-control" id="chol" name="chol" required>
+                <label for="serumcholestrol">Serum Cholesterol (mg/dl):</label>
+                <input type="number" id="serumcholestrol" name="serumcholestrol" required>
             </div>
             
             <div class="form-group">
-                <label for="fbs">Fasting Blood Sugar > 120 mg/dl:</label>
-                <select class="form-control" id="fbs" name="fbs" required>
-                    <option value="1">True (1)</option>
-                    <option value="0">False (0)</option>
+                <label for="fastingbloodsugar">Fasting Blood Sugar > 120 mg/dl:</label>
+                <select id="fastingbloodsugar" name="fastingbloodsugar" required>
+                    <option value="">Select</option>
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
                 </select>
             </div>
             
             <div class="form-group">
-                <label for="restecg">Resting Electrocardiographic Results:</label>
-                <select class="form-control" id="restecg" name="restecg" required>
-                    <option value="0">Normal (0)</option>
-                    <option value="1">ST-T Wave Abnormality (1)</option>
-                    <option value="2">Left Ventricular Hypertrophy (2)</option>
+                <label for="restingrelectro">Resting Electrocardiographic Results:</label>
+                <select id="restingrelectro" name="restingrelectro" required>
+                    <option value="">Select</option>
+                    <option value="0">Normal</option>
+                    <option value="1">ST-T Wave Abnormality</option>
+                    <option value="2">Left Ventricular Hypertrophy</option>
                 </select>
             </div>
             
             <div class="form-group">
-                <label for="thalach">Maximum Heart Rate Achieved:</label>
-                <input type="number" class="form-control" id="thalach" name="thalach" required>
+                <label for="maxheartrate">Maximum Heart Rate Achieved:</label>
+                <input type="number" id="maxheartrate" name="maxheartrate" required>
             </div>
             
             <div class="form-group">
-                <label for="exang">Exercise Induced Angina:</label>
-                <select class="form-control" id="exang" name="exang" required>
-                    <option value="1">Yes (1)</option>
-                    <option value="0">No (0)</option>
+                <label for="exerciseangia">Exercise Induced Angina:</label>
+                <select id="exerciseangia" name="exerciseangia" required>
+                    <option value="">Select</option>
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
                 </select>
             </div>
             
             <div class="form-group">
-                <label for="oldpeak">ST Depression Induced by Exercise:</label>
-                <input type="number" step="0.1" class="form-control" id="oldpeak" name="oldpeak" required>
+                <label for="oldpeak">ST Depression Induced by Exercise (oldpeak):</label>
+                <input type="number" id="oldpeak" name="oldpeak" step="0.1" required>
             </div>
             
             <div class="form-group">
                 <label for="slope">Slope of the Peak Exercise ST Segment:</label>
-                <select class="form-control" id="slope" name="slope" required>
-                    <option value="0">Upsloping (0)</option>
-                    <option value="1">Flat (1)</option>
-                    <option value="2">Downsloping (2)</option>
+                <select id="slope" name="slope" required>
+                    <option value="">Select</option>
+                    <option value="1">Upsloping</option>
+                    <option value="2">Flat</option>
+                    <option value="3">Downsloping</option>
                 </select>
             </div>
             
             <div class="form-group">
-                <label for="ca">Number of Major Vessels Colored by Fluoroscopy:</label>
-                <select class="form-control" id="ca" name="ca" required>
-                    <option value="0">0 (0)</option>
-                    <option value="1">1 (1)</option>
-                    <option value="2">2 (2)</option>
-                    <option value="3">3 (3)</option>
-                    <option value="4">4 (4)</option>
+                <label for="noofmajorvessels">Number of Major Vessels (0-3) Colored by Fluoroscopy:</label>
+                <select id="noofmajorvessels" name="noofmajorvessels" required>
+                    <option value="">Select</option>
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
                 </select>
             </div>
             
-            <button type="submit" class="btn btn-primary">Predict</button>
+            <button type="submit" id="predict-button">Predict</button>
         </form>
+        
+        <div id="result" class="hidden">
+            <h2>Prediction Result</h2>
+            <p id="result-message"></p>
+            <p id="result-probability"></p>
+            <div id="patient-info"></div>
+        </div>
     </div>
+    
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

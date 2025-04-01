@@ -258,15 +258,91 @@ button[type="submit"]:active {
     border-radius: 15px;
     margin: 15px 0;
     position: relative;
-    overflow: hidden;
+    overflow: visible; /* Keep this visible to show the pointer */
 }
 
 .risk-indicator {
     height: 100%;
-    width: 0;
-    transition: width 1s ease-out;
+    width: 0; /* Will be set dynamically by JavaScript */
     position: relative;
     border-radius: 15px;
+    transition: width 1.2s ease-out;
+    z-index: 1; /* Lower z-index than the pointer */
+}
+
+/* Completely redesigned risk pointer for better visual clarity */
+.risk-pointer {
+    position: absolute;
+    top: -22px; /* Position it further above the meter */
+    transform: translateX(-50%); /* Center it on the exact percentage point */
+    z-index: 3; /* Ensure it's above everything */
+    transition: left 1.2s ease-out;
+}
+
+/* Create a clean, modern marker with a circle and stem */
+.risk-pointer:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    background-color: #0056b3; /* Match the app's primary blue color */
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    border: 2px solid white;
+}
+
+/* Add subtle pulsing animation to draw attention */
+@keyframes pulse-pointer {
+    0% { transform: translateX(-50%) scale(1); }
+    50% { transform: translateX(-50%) scale(1.1); }
+    100% { transform: translateX(-50%) scale(1); }
+}
+
+/* Arrow pointing down to the meter */
+.risk-pointer:after {
+    content: '';
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid #0056b3;
+}
+
+/* Make the pointer pulse on load */
+.meter-container.loaded .risk-pointer:before {
+    animation: pulse-pointer 1.5s ease-in-out 1;
+}
+
+/* Dynamic risk coloring - JS will add these classes */
+.risk-pointer.low:before {
+    background-color: #28a745;
+}
+
+.risk-pointer.low:after {
+    border-top-color: #28a745;
+}
+
+.risk-pointer.moderate:before {
+    background-color: #ffc107;
+}
+
+.risk-pointer.moderate:after {
+    border-top-color: #ffc107;
+}
+
+.risk-pointer.high:before {
+    background-color: #dc3545;
+}
+
+.risk-pointer.high:after {
+    border-top-color: #dc3545;
 }
 
 .risk-indicator.low {
@@ -284,9 +360,31 @@ button[type="submit"]:active {
 .risk-labels {
     display: flex;
     justify-content: space-between;
-    margin-top: 5px;
-    font-size: 0.8rem;
-    color: #6c757d;
+    margin-top: 10px; /* More space between meter and labels */
+    font-size: 0.85rem;
+    color: #495057; /* Slightly darker color for better contrast */
+    font-weight: 500; /* Make labels slightly bolder */
+}
+
+/* Add percentage markers to the risk meter */
+.risk-ticks {
+    position: relative;
+    width: 100%;
+    height: 5px;
+    margin-top: 2px;
+}
+
+.risk-tick {
+    position: absolute;
+    height: 5px;
+    width: 1px;
+    background-color: #adb5bd;
+}
+
+.risk-tick.major {
+    height: 8px;
+    width: 2px;
+    background-color: #6c757d;
 }
 
 /* --- Recommendations Panel --- */
@@ -701,7 +799,13 @@ button[type="submit"]:active {
 }
 
 /* PDF generation styles */
+.generating-pdf {
+    overflow: hidden;
+}
+
 .generating-pdf button,
+.generating-pdf .action-buttons,
+.generating-pdf .feedback-section,
 .generating-pdf .modal,
 .generating-pdf .close-button {
     display: none !important;
@@ -725,6 +829,18 @@ button[type="submit"]:active {
     .modal {
         display: none !important;
     }
+}
+
+/* PDF generation loading message */
+.pdf-loading-message {
+    animation: pulse 1.5s infinite;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes pulse {
+    0% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.05); }
+    100% { transform: translate(-50%, -50%) scale(1); }
 }
 
 /* --- Responsive Adjustments --- */

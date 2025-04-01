@@ -6,7 +6,11 @@
     <title>Heart Disease Prediction</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>❤️</text></svg>">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- Replace html2pdf with jsPDF and html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Chart.js for better visualization capture -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -134,11 +138,13 @@
                 <h3>Risk Meter</h3>
                 <div class="meter-container">
                     <div id="risk-level" class="risk-indicator"></div>
+                    <!-- Pointer will be added by JavaScript -->
                 </div>
+                
                 <div class="risk-labels">
-                    <span>Low Risk</span>
-                    <span>Moderate Risk</span>
-                    <span>High Risk</span>
+                    <span>Low Risk (0-30%)</span>
+                    <span>Moderate Risk (30-70%)</span>
+                    <span>High Risk (70-100%)</span>
                 </div>
             </div>
             

@@ -182,23 +182,224 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Generate PDF of results
+    // Generate PDF of results with enhanced content including charts and graphs
     function generatePDF() {
-        const element = document.getElementById('result');
-        const opt = {
-            margin: 1,
-            filename: 'heart-health-assessment.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
+        // Show a loading message
+        const loadingMessage = document.createElement('div');
+        loadingMessage.className = 'pdf-loading-message';
+        loadingMessage.textContent = 'Generating PDF... Please wait.';
+        loadingMessage.style.position = 'fixed';
+        loadingMessage.style.top = '50%';
+        loadingMessage.style.left = '50%';
+        loadingMessage.style.transform = 'translate(-50%, -50%)';
+        loadingMessage.style.padding = '20px';
+        loadingMessage.style.background = 'rgba(0,0,0,0.8)';
+        loadingMessage.style.color = 'white';
+        loadingMessage.style.borderRadius = '8px';
+        loadingMessage.style.zIndex = '9999';
+        document.body.appendChild(loadingMessage);
+        
+        try {
+            const { jsPDF } = window.jspdf;
+            
+            // Create a new PDF document
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            // Helper variables
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 15;
+            const contentWidth = pageWidth - 2 * margin;
+            
+            // Add professional header
+            doc.setFillColor(41, 128, 185); // Professional blue header
+            doc.rect(0, 0, pageWidth, 25, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Heart Health Assessment Report', pageWidth / 2, 15, { align: 'center' });
+            
+            // Reset text color for rest of document
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal');
+            
+            // Add date and report ID
+            doc.setFontSize(10);
+            const reportDate = new Date().toLocaleDateString();
+            const reportId = `HD-${Math.floor(Math.random() * 10000)}`;
+            doc.text(`Date: ${reportDate}`, margin, 35);
+            doc.text(`Report ID: ${reportId}`, margin, 40);
+            
+            // Add patient information
+            const patientId = document.getElementById('patientid').value || 'Not provided';
+            const patientAge = document.getElementById('age').value;
+            const patientGender = document.getElementById('gender').options[document.getElementById('gender').selectedIndex].text;
+            
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Patient Information', margin, 50);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Patient ID: ${patientId}`, margin, 58);
+            doc.text(`Age: ${patientAge}`, margin, 64);
+            doc.text(`Gender: ${patientGender}`, margin, 70);
+            
+            // Add assessment result
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Assessment Result', margin, 80);
+            
+            const predictionText = resultMessage.textContent;
+            const probabilityText = resultProbability.textContent;
+            
+            // Add colored box for risk level
+            if (predictionText.includes('High risk')) {
+                doc.setFillColor(231, 76, 60); // Red for high risk
+            } else {
+                doc.setFillColor(46, 204, 113); // Green for low risk
+            }
+            doc.roundedRect(margin, 84, contentWidth, 20, 3, 3, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(12);
+            doc.text(predictionText, pageWidth / 2, 94, { align: 'center' });
+            doc.text(probabilityText, pageWidth / 2, 100, { align: 'center' });
+            doc.setTextColor(0, 0, 0);
 
-        // Temporarily add a class for PDF generation
-        element.classList.add('generating-pdf');
-
-        html2pdf().set(opt).from(element).save().then(() => {
-            element.classList.remove('generating-pdf');
-        });
+            // Now we'll capture various elements of the page using html2canvas and add them to the PDF
+            
+            // First, let's capture the risk meter
+            html2canvas(document.getElementById('risk-visualizer'), {
+                scale: 2,
+                logging: false,
+                useCORS: true
+            }).then(riskCanvas => {
+                const riskMeterImgData = riskCanvas.toDataURL('image/png');
+                
+                doc.addPage();
+                doc.setFillColor(41, 128, 185);
+                doc.rect(0, 0, pageWidth, 25, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(16);
+                doc.text('Risk Assessment Visualization', pageWidth / 2, 15, { align: 'center' });
+                
+                doc.setTextColor(0, 0, 0);
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Risk Meter', margin, 35);
+                
+                // Add the risk meter image
+                doc.addImage(riskMeterImgData, 'PNG', margin, 40, contentWidth, 70);
+                
+                // Now capture the risk interpretation
+                html2canvas(document.getElementById('risk-interpretation'), {
+                    scale: 2,
+                    logging: false,
+                    useCORS: true
+                }).then(interpretationCanvas => {
+                    const interpretationImgData = interpretationCanvas.toDataURL('image/png');
+                    
+                    doc.text('Risk Interpretation', margin, 120);
+                    doc.addImage(interpretationImgData, 'PNG', margin, 125, contentWidth, 50);
+                    
+                    // Now capture contributing factors
+                    html2canvas(document.querySelector('.contributing-factors'), {
+                        scale: 2,
+                        logging: false,
+                        useCORS: true
+                    }).then(factorsCanvas => {
+                        const factorsImgData = factorsCanvas.toDataURL('image/png');
+                        
+                        doc.addPage();
+                        doc.setFillColor(41, 128, 185);
+                        doc.rect(0, 0, pageWidth, 25, 'F');
+                        doc.setTextColor(255, 255, 255);
+                        doc.setFontSize(16);
+                        doc.text('Contributing Factors', pageWidth / 2, 15, { align: 'center' });
+                        
+                        doc.setTextColor(0, 0, 0);
+                        doc.setFontSize(14);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('Key Contributing Factors', margin, 35);
+                        
+                        doc.addImage(factorsImgData, 'PNG', margin, 40, contentWidth, 100);
+                        
+                        // Now capture risk comparison
+                        html2canvas(document.querySelector('.comparison-chart'), {
+                            scale: 2,
+                            logging: false,
+                            useCORS: true
+                        }).then(comparisonCanvas => {
+                            const comparisonImgData = comparisonCanvas.toDataURL('image/png');
+                            
+                            doc.text('Risk Comparison', margin, 150);
+                            doc.addImage(comparisonImgData, 'PNG', margin, 155, contentWidth, 80);
+                            
+                            // Now capture recommendations
+                            html2canvas(document.getElementById('recommendations'), {
+                                scale: 2,
+                                logging: false,
+                                useCORS: true
+                            }).then(recommendationsCanvas => {
+                                const recommendationsImgData = recommendationsCanvas.toDataURL('image/png');
+                                
+                                doc.addPage();
+                                doc.setFillColor(41, 128, 185);
+                                doc.rect(0, 0, pageWidth, 25, 'F');
+                                doc.setTextColor(255, 255, 255);
+                                doc.setFontSize(16);
+                                doc.text('Personalized Recommendations', pageWidth / 2, 15, { align: 'center' });
+                                
+                                doc.setTextColor(0, 0, 0);
+                                doc.setFontSize(14);
+                                doc.setFont('helvetica', 'bold');
+                                doc.text('Recommendations', margin, 35);
+                                
+                                doc.addImage(recommendationsImgData, 'PNG', margin, 40, contentWidth, 180);
+                                
+                                // Add disclaimer
+                                doc.setFont('helvetica', 'italic');
+                                doc.setFontSize(9);
+                                const disclaimer = 'Disclaimer: This report is for informational purposes only and does not constitute medical advice. Always consult with your healthcare provider for proper diagnosis and treatment.';
+                                const splitDisclaimer = doc.splitTextToSize(disclaimer, contentWidth);
+                                
+                                // Add disclaimer and page numbers to all pages
+                                const pageCount = doc.getNumberOfPages();
+                                for (let i = 1; i <= pageCount; i++) {
+                                    doc.setPage(i);
+                                    doc.setFont('helvetica', 'italic');
+                                    doc.setFontSize(9);
+                                    doc.text(splitDisclaimer, margin, 270);
+                                    
+                                    doc.setFont('helvetica', 'normal');
+                                    doc.setFontSize(10);
+                                    doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, 280, { align: 'center' });
+                                }
+                                
+                                // Save the PDF
+                                const fileName = `Heart_Health_Assessment_${patientId || reportId}.pdf`;
+                                doc.save(fileName);
+                                
+                                // Remove loading message
+                                document.body.removeChild(loadingMessage);
+                            });
+                        });
+                    });
+                });
+            }).catch(error => {
+                console.error('Error generating PDF:', error);
+                alert('Error generating PDF. Please try again.');
+                document.body.removeChild(loadingMessage);
+            });
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF. Please try again.');
+            document.body.removeChild(loadingMessage);
+        }
     }
 
     form.addEventListener('submit', function(e) {
@@ -273,7 +474,52 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Update risk level visualization
             const riskPercentage = (data.probability * 100);
+            
+            // Fix the risk meter by correctly setting the width property
             riskLevel.style.width = `${riskPercentage}%`;
+            
+            // Ensure the risk meter container has percentage markers
+            const meterContainer = document.querySelector('.meter-container');
+            
+            // Check if ticks already exist
+            let ticksContainer = document.querySelector('.risk-ticks');
+            if (!ticksContainer) {
+                // Create percentage markers if they don't exist
+                ticksContainer = document.createElement('div');
+                ticksContainer.className = 'risk-ticks';
+                meterContainer.parentNode.insertBefore(ticksContainer, meterContainer.nextSibling);
+                
+                // Add tick marks at 10% intervals
+                for (let i = 0; i <= 100; i += 10) {
+                    const tick = document.createElement('div');
+                    tick.className = i % 30 === 0 ? 'risk-tick major' : 'risk-tick';
+                    tick.style.left = `${i}%`;
+                    ticksContainer.appendChild(tick);
+                }
+            }
+            
+            // Update or create the risk pointer
+            let riskPointer = document.getElementById('risk-pointer');
+            if (!riskPointer) {
+                riskPointer = document.createElement('div');
+                riskPointer.id = 'risk-pointer';
+                riskPointer.className = 'risk-pointer';
+                meterContainer.appendChild(riskPointer);
+            }
+            
+            // Position the pointer at the exact risk percentage and apply the correct color class
+            requestAnimationFrame(() => {
+                riskPointer.style.left = `${riskPercentage}%`;
+                
+                // Remove all risk classes first
+                riskPointer.classList.remove('low', 'moderate', 'high');
+                
+                // Add the appropriate risk class to the pointer
+                riskPointer.classList.add(riskCategory);
+                
+                // Add the 'loaded' class to the container to trigger animation
+                meterContainer.classList.add('loaded');
+            });
 
             // Set risk level class
             let riskCategory;
@@ -509,36 +755,42 @@ document.addEventListener('DOMContentLoaded', function() {
             lifestyleHTML += '<li>Avoid tobacco products and limit alcohol consumption</li>';
             lifestyleHTML += '<li>Manage stress through relaxation techniques</li>';
 
-            // Monitoring recommendations based on risk
+            // Enhanced monitoring recommendations based on risk
             if (riskPercentage < 30) {
-                monitoringHTML += '<li>Annual blood pressure check</li>';
-                monitoringHTML += '<li>Check cholesterol levels every 4-6 years</li>';
-                monitoringHTML += '<li>Regular check-ups with your primary care physician</li>';
-            } else if (riskPercentage < 70) {
+                monitoringHTML += '<li>Regular annual physical examination with your doctor</li>';
                 monitoringHTML += '<li>Blood pressure check every 6 months</li>';
-                monitoringHTML += '<li>Annual cholesterol and blood glucose tests</li>';
-                monitoringHTML += '<li>Consider an annual ECG</li>';
-                monitoringHTML += '<li>Schedule regular check-ups with your doctor</li>';
+                monitoringHTML += '<li>Cholesterol screening every 4-6 years (or as recommended)</li>';
+                monitoringHTML += '<li>Maintain a healthy weight and track BMI annually</li>';
+            } else if (riskPercentage < 70) {
+                monitoringHTML += '<li>Schedule a follow-up appointment with your doctor within 3 months</li>';
+                monitoringHTML += '<li>Monitor blood pressure at home regularly (at least weekly)</li>';
+                monitoringHTML += '<li>Cholesterol and blood glucose tests every 6-12 months</li>';
+                monitoringHTML += '<li>Consider a baseline electrocardiogram (ECG) test</li>';
+                monitoringHTML += '<li>Track your diet and exercise in a health journal</li>';
             } else {
-                monitoringHTML += '<li>Regular blood pressure monitoring (consider home monitoring)</li>';
-                monitoringHTML += '<li>Frequent cholesterol and blood glucose tests as advised by your doctor</li>';
-                monitoringHTML += '<li>ECG and other heart function tests as recommended</li>';
-                monitoringHTML += '<li>Close follow-up with healthcare providers</li>';
+                monitoringHTML += '<li>Immediate follow-up with a cardiologist within 2-4 weeks</li>';
+                monitoringHTML += '<li>Daily home blood pressure monitoring and tracking</li>';
+                monitoringHTML += '<li>Comprehensive cardiac workup including stress test and imaging</li>';
+                monitoringHTML += '<li>Frequent lab work (every 3-4 months) to monitor cholesterol and other markers</li>';
+                monitoringHTML += '<li>Careful monitoring of symptoms like chest pain, shortness of breath, or fatigue</li>';
             }
 
             // Medical advice based on risk
             if (riskPercentage < 30) {
-                medicalHTML += '<li>Discuss any cardiovascular concerns with your doctor at your next visit</li>';
+                medicalHTML += '<li>Discuss results at your next regular check-up</li>';
                 medicalHTML += '<li>No immediate medical intervention required</li>';
+                medicalHTML += '<li>Continue following general heart health guidelines</li>';
             } else if (riskPercentage < 70) {
-                medicalHTML += '<li>Schedule an appointment with your doctor to discuss these results</li>';
-                medicalHTML += '<li>Consider a referral to a cardiologist for further evaluation</li>';
-                medicalHTML += '<li>Discuss whether preventive medications might be appropriate</li>';
+                medicalHTML += '<li>Schedule an appointment with your primary care physician soon</li>';
+                medicalHTML += '<li>Discuss whether you should see a cardiologist for further evaluation</li>';
+                medicalHTML += '<li>Consider medication options if other risk factors are present</li>';
+                medicalHTML += '<li>Evaluate need for additional cardiac testing</li>';
             } else {
-                medicalHTML += '<li>Seek prompt medical attention to discuss these results</li>';
-                medicalHTML += '<li>Consult with a cardiologist for comprehensive evaluation</li>';
-                medicalHTML += '<li>Follow your doctor\'s advice regarding medications and treatments</li>';
-                medicalHTML += '<li>Consider a comprehensive cardiac assessment</li>';
+                medicalHTML += '<li>Seek prompt medical attention - this is a high priority</li>';
+                medicalHTML += '<li>Request referral to a cardiologist for specialized care</li>';
+                medicalHTML += '<li>Discuss medication and treatment options</li>';
+                medicalHTML += '<li>Create a comprehensive cardiac care plan with your healthcare team</li>';
+                medicalHTML += '<li>Consider joining a cardiac rehabilitation program if recommended</li>';
             }
         }
 

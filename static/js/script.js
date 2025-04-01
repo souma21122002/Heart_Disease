@@ -147,42 +147,247 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Handle sending email to doctor
-    document.getElementById('send-email').addEventListener('click', function() {
+    // Handle sending email with PDF attachment
+    document.getElementById('send-email').addEventListener('click', async function() {
         const doctorEmail = document.getElementById('doctor-email').value;
+        const userMessage = document.getElementById('user-message').value || '';
+        
         if (!doctorEmail) {
             alert('Please enter doctor\'s email address');
             return;
         }
-        alert(`Results would be sent to ${doctorEmail}`);
-        emailModal.classList.add('hidden');
-    });
-
-    // Handle setting reminder
-    document.getElementById('set-reminder').addEventListener('click', function() {
-        const reminderEmail = document.getElementById('reminder-email').value;
-        const reminderDate = document.getElementById('reminder-date').value;
-
-        if (!reminderEmail || !reminderDate) {
-            alert('Please fill in all fields');
-            return;
+        
+        // Show loading state
+        this.textContent = "Generating PDF...";
+        this.disabled = true;
+        
+        try {
+            // Generate PDF and get it as a data URL
+            const pdfDataUrl = await generatePDFForEmail();
+            
+            // Log a sample of the PDF data (first 100 chars) to verify it's not empty
+            console.log("PDF data URL (sample):", pdfDataUrl.substring(0, 100) + "...");
+            
+            // Update button text
+            this.textContent = "Sending Email...";
+            
+            // Create form data for sending
+            const emailData = new FormData();
+            emailData.append('doctorEmail', doctorEmail);
+            emailData.append('message', userMessage);
+            emailData.append('predictionResult', resultMessage.textContent);
+            emailData.append('probability', resultProbability.textContent);
+            emailData.append('patientid', document.getElementById('patientid').value || 'Not provided');
+            emailData.append('pdfAttachment', pdfDataUrl);  // Add the PDF data
+            
+            // Send to backend
+            fetch('/send-email', {
+                method: 'POST',
+                body: emailData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    emailModal.classList.add('hidden');
+                } else {
+                    throw new Error(data.error || 'Failed to send email');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to send email. Please try again later.');
+            })
+            .finally(() => {
+                // Restore button state
+                this.textContent = "Send Email";
+                this.disabled = false;
+            });
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to generate PDF for email. Please try again.');
+            this.textContent = "Send Email";
+            this.disabled = false;
         }
-        alert(`Reminder set for ${reminderDate}. A notification will be sent to ${reminderEmail}`);
-        reminderModal.classList.add('hidden');
     });
 
-    // Handle feedback buttons
-    feedbackButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            feedbackButtons.forEach(btn => btn.classList.remove('selected'));
-            this.classList.add('selected');
-            setTimeout(() => {
-                alert('Thank you for your feedback!');
-            }, 300);
-        });
-    });
+    // Generate PDF for email attachment
+    async function generatePDFForEmail() {
+        try {
+            const { jsPDF } = window.jspdf;
+            
+            // Create a new PDF document
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+            });
+            
+            // Helper variables
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 10;
+            const contentWidth = pageWidth - 2 * margin;
+            
+            // Add header
+            doc.setFillColor(41, 128, 185);
+            doc.rect(0, 0, pageWidth, 15, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Heart Health Assessment Report', pageWidth / 2, 10, { align: 'center' });
+            
+            // Reset text color for rest of document
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal');
+            
+            // Add date and report ID
+            doc.setFontSize(9);
+            const reportDate = new Date().toLocaleDateString();
+            const reportId = `HD-${Math.floor(Math.random() * 10000)}`;
+            doc.text(`Date: ${reportDate} | Report ID: ${reportId}`, margin, 22);
+            
+            // Add patient information
+            const patientId = document.getElementById('patientid').value || 'Not provided';
+            const patientAge = document.getElementById('age').value;
+            const patientGender = document.getElementById('gender').options[document.getElementById('gender').selectedIndex].text;
+            
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Patient Information', margin, 30);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`ID: ${patientId} | Age: ${patientAge} | Gender: ${patientGender}`, margin, 36);
+            
+            // Add assessment result
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Assessment Result', margin, 44);
+            
+            const predictionText = resultMessage.textContent;
+            const probabilityText = resultProbability.textContent;
+            
+            // Add colored box for risk level
+            if (predictionText.includes('High risk')) {
+                doc.setFillColor(220, 53, 69);
+            } else {
+                doc.setFillColor(40, 167, 69);
+            }
+            doc.roundedRect(margin, 47, contentWidth, 12, 2, 2, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(10);
+            doc.text(`${predictionText} | ${probabilityText}`, pageWidth / 2, 54, { align: 'center' });
+            doc.setTextColor(0, 0, 0);
+            
+            // Add risk interpretation
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(riskInterpretation.textContent.replace(/<[^>]*>/g, '').trim(), margin, 65, {
+                maxWidth: contentWidth,
+                align: 'left'
+            });
+            
+            // Add factors section
+            let yPos = 85;
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Key Contributing Factors', margin, yPos);
+            yPos += 6;
+            
+            // Extract factors from the DOM
+            const factorItems = document.querySelectorAll('.factor-item');
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            
+            factorItems.forEach((item, index) => {
+                const factorName = item.querySelector('.factor-name').textContent;
+                const factorDesc = item.querySelector('.factor-description').textContent;
+                
+                doc.text(`• ${factorName}: ${factorDesc}`, margin, yPos);
+                yPos += 5;
+                
+                if ((index + 1) % 3 === 0 || index === factorItems.length - 1) {
+                    yPos += 2;
+                }
+            });
+            
+            // Add recommendations section
+            yPos += 3;
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Recommendations', margin, yPos);
+            yPos += 6;
+            
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            
+            // Extract recommendations from the DOM
+            const lifestyleItems = document.querySelectorAll('#lifestyle-changes li');
+            const monitoringItems = document.querySelectorAll('#monitoring-steps li');
+            const medicalItems = document.querySelectorAll('#medical-advice li');
+            
+            // Add lifestyle recommendations
+            if (lifestyleItems.length > 0) {
+                doc.setFont('helvetica', 'bold');
+                doc.text('Lifestyle:', margin, yPos);
+                doc.setFont('helvetica', 'normal');
+                yPos += 5;
+                
+                lifestyleItems.forEach(item => {
+                    doc.text(`• ${item.textContent}`, margin + 3, yPos);
+                    yPos += 5;
+                });
+            }
+            
+            // Add monitoring recommendations
+            if (monitoringItems.length > 0) {
+                doc.setFont('helvetica', 'bold');
+                doc.text('Monitoring:', margin, yPos);
+                doc.setFont('helvetica', 'normal');
+                yPos += 5;
+                
+                monitoringItems.forEach(item => {
+                    doc.text(`• ${item.textContent}`, margin + 3, yPos);
+                    yPos += 5;
+                });
+            }
+            
+            // Add medical recommendations
+            if (medicalItems.length > 0) {
+                doc.setFont('helvetica', 'bold');
+                doc.text('Medical:', margin, yPos);
+                doc.setFont('helvetica', 'normal');
+                yPos += 5;
+                
+                medicalItems.forEach(item => {
+                    doc.text(`• ${item.textContent}`, margin + 3, yPos);
+                    yPos += 5;
+                });
+            }
+            
+            // Add disclaimer at bottom of page
+            yPos = pageHeight - 15;
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'italic');
+            doc.text('Disclaimer: This assessment is for informational purposes only and is not a substitute for professional medical advice.', pageWidth/2, yPos, { align: 'center' });
+            yPos += 4;
+            doc.text('Always consult with a qualified healthcare provider regarding any medical condition.', pageWidth/2, yPos, { align: 'center' });
+            
+            // Return the PDF as a data URL
+            // Make sure to return the raw base64 data without any modifications
+            const pdfData = doc.output('datauristring');
+            console.log("PDF data URL length:", pdfData.length);
+            return pdfData;
+            
+        } catch (error) {
+            console.error('Error generating PDF for email:', error);
+            throw error;
+        }
+    }
 
-    // Generate PDF of results with enhanced content including charts and graphs
+    // Generate PDF for download
     function generatePDF() {
         // Show a loading message
         const loadingMessage = document.createElement('div');

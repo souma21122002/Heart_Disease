@@ -140,6 +140,15 @@ p {
     background-color: #f8f9fa;
 }
 
+/* Helper text for form fields */
+.helper-text {
+    display: block;
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 3px;
+    font-style: italic;
+}
+
 /* --- Submit Button --- */
 button[type="submit"] {
     color: white;

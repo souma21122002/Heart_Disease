@@ -2,8 +2,22 @@ from flask import Flask, render_template, request, jsonify
 import pickle
 import numpy as np
 import os
+# Add email functionality
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import ssl
+import logging
+from email.mime.base import MIMEBase
+from email import encoders
+import base64
+import re
 
 app = Flask(__name__)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load the model
 model_path = os.path.join(os.path.dirname(__file__), 'heart_disease_model.pkl')
@@ -25,6 +39,12 @@ validation_ranges = {
     'slope': (0, 3),
     'ca': (0, 3)
 }
+
+# Email configuration
+EMAIL_SENDER = "penguine.dc123@gmail.com"
+# This should be an app password, not your regular Gmail password
+EMAIL_PASSWORD = "kloxivfmhgsxpzfs"
+DOCTOR_EMAIL = "s.f.meisser87@gmail.com"
 
 def get_recommendations(probability, prediction, features):
     """Generate personalized recommendations based on risk level and features"""
@@ -211,6 +231,168 @@ def predict():
     except Exception as e:
         app.logger.error(f"Error during prediction: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/send-email', methods=['POST'])
+def send_email():
+    try:
+        # Get form data
+        patient_id = request.form.get('patientid', 'Not provided')
+        doctor_email = request.form.get('doctorEmail', DOCTOR_EMAIL)
+        message = request.form.get('message', '')
+        prediction_result = request.form.get('predictionResult', '')
+        probability = request.form.get('probability', '')
+        pdf_attachment = request.form.get('pdfAttachment', None)
+        
+        # Log the email request
+        logger.info(f"Email request received for patient {patient_id} to {doctor_email}")
+        
+        # Create the email
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f"Heart Health Assessment Results - Patient ID: {patient_id}"
+        msg['From'] = EMAIL_SENDER
+        msg['To'] = doctor_email
+        
+        # Create HTML email content
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background-color: #007bff; color: white; padding: 10px; text-align: center; }}
+                .content {{ padding: 20px; }}
+                .result {{ font-weight: bold; font-size: 18px; color: {'#d9534f' if 'High risk' in prediction_result else '#5cb85c'}; }}
+                .footer {{ font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 10px; margin-top: 20px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h2>Heart Health Assessment Results</h2>
+                </div>
+                <div class="content">
+                    <p>Dear Doctor,</p>
+                    <p>Please find the heart health assessment results for your patient (ID: {patient_id}):</p>
+                    
+                    <p class="result">{prediction_result}</p>
+                    <p>Probability: {probability}</p>
+                    
+                    <p>Patient's message:</p>
+                    <p>{message if message else 'No additional message provided.'}</p>
+                    
+                    <p>For more detailed information, please see the attached PDF report.</p>
+                    
+                    <p>Please review these results and advise the patient on next steps.</p>
+                    <p>Thank you,</p>
+                    <p>Heart Health Assessment Tool</p>
+                </div>
+                <div class="footer">
+                    <p>This is an automated message. Please do not reply to this email.</p>
+                    <p>The information contained in this email is for the exclusive use of the intended recipient and may contain confidential information. If you are not the intended recipient, please notify the sender immediately and destroy all copies.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Attach HTML content
+        msg.attach(MIMEText(html_content, 'html'))
+        
+        # Attach PDF if available
+        if pdf_attachment:
+            try:
+                # Check if there's actual data in the attachment
+                if len(pdf_attachment) < 100:
+                    logger.error(f"PDF attachment data too short: {pdf_attachment}")
+                    raise ValueError("Invalid PDF data")
+                
+                logger.info(f"PDF attachment data received. Length: {len(pdf_attachment)}")
+                
+                # Extract the base64 data from the data URL
+                if 'data:application/pdf;base64,' in pdf_attachment:
+                    # Standard data URI format
+                    pdf_data = re.sub('^data:application/pdf;base64,', '', pdf_attachment)
+                else:
+                    # Try alternate format that might be used
+                    pdf_data = re.sub('^data:base64,', '', pdf_attachment)
+                    if pdf_data == pdf_attachment:  # If no substitution was made
+                        # Just take everything after the comma if present
+                        if ',' in pdf_attachment:
+                            pdf_data = pdf_attachment.split(',', 1)[1]
+                        else:
+                            # Use as is, assuming it's already base64
+                            pdf_data = pdf_attachment
+                
+                logger.info(f"PDF base64 data extracted. Length: {len(pdf_data)}")
+                
+                try:
+                    # Try to decode the base64 data
+                    pdf_bytes = base64.b64decode(pdf_data)
+                    logger.info(f"PDF successfully decoded. Size: {len(pdf_bytes)} bytes")
+                    
+                    # Verify we have a valid PDF (check for PDF signature)
+                    if not pdf_bytes.startswith(b'%PDF-'):
+                        logger.warning("PDF does not start with %PDF- signature")
+                        # Sometimes the signature might be in a different encoding or have extra bytes
+                        # Try to find the PDF signature anywhere in the first 1024 bytes
+                        if b'%PDF-' not in pdf_bytes[:1024]:
+                            logger.error("Invalid PDF format - cannot find %PDF- signature")
+                            # We'll still try to attach it
+                
+                    # Create the attachment
+                    pdf_part = MIMEBase('application', 'pdf')
+                    pdf_part.set_payload(pdf_bytes)
+                    
+                    # Encode and add headers
+                    encoders.encode_base64(pdf_part)
+                    pdf_part.add_header(
+                        'Content-Disposition',
+                        f'attachment; filename="Heart_Assessment_Report_{patient_id}.pdf"'
+                    )
+                    
+                    # Add the attachment to the message
+                    msg.attach(pdf_part)
+                    
+                    logger.info("PDF attachment successfully added to email")
+                except Exception as decode_error:
+                    logger.error(f"Error decoding PDF base64 data: {str(decode_error)}")
+                    logger.error(f"First 100 chars of PDF data: {pdf_data[:100]}")
+                    raise
+                
+            except Exception as pdf_error:
+                logger.error(f"Error attaching PDF: {str(pdf_error)}")
+                # Continue with the email even if PDF attachment fails
+                
+        # Connect to Gmail SMTP server and send the email
+        try:
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as server:
+                # Login to sender email
+                server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+                
+                # Send email
+                server.sendmail(EMAIL_SENDER, doctor_email, msg.as_string())
+                
+                logger.info(f"Email sent successfully to {doctor_email}")
+            
+            # Create success response
+            response = {
+                'success': True,
+                'message': f'Results sent to {doctor_email} with PDF attachment',
+            }
+            
+            return jsonify(response)
+            
+        except Exception as smtp_error:
+            logger.error(f"SMTP error: {str(smtp_error)}")
+            return jsonify({
+                'success': False, 
+                'error': f"Email sending failed: {str(smtp_error)}"
+            }), 500
+    
+    except Exception as e:
+        logger.error(f"Error sending email: {str(e)}")
+        return jsonify({'error': str(e), 'success': False}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

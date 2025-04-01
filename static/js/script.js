@@ -202,199 +202,209 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const { jsPDF } = window.jspdf;
             
-            // Create a new PDF document
+            // Create a new PDF document with smaller margins
             const doc = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: 'a4'
+                format: 'a4',
+                compress: true
             });
             
-            // Helper variables
+            // Helper variables - reduce margins for more compact layout
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
-            const margin = 15;
+            const margin = 10; // Reduced from 15
             const contentWidth = pageWidth - 2 * margin;
             
-            // Add professional header
+            // Add slim professional header
             doc.setFillColor(41, 128, 185); // Professional blue header
-            doc.rect(0, 0, pageWidth, 25, 'F');
+            doc.rect(0, 0, pageWidth, 15, 'F'); // Reduced height from 25 to 15
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(16);
+            doc.setFontSize(14); // Reduced from 16
             doc.setFont('helvetica', 'bold');
-            doc.text('Heart Health Assessment Report', pageWidth / 2, 15, { align: 'center' });
+            doc.text('Heart Health Assessment Report', pageWidth / 2, 10, { align: 'center' });
             
             // Reset text color for rest of document
             doc.setTextColor(0, 0, 0);
             doc.setFont('helvetica', 'normal');
             
-            // Add date and report ID
-            doc.setFontSize(10);
+            // Add date and report ID in a single line to save space
+            doc.setFontSize(9); // Reduced from 10
             const reportDate = new Date().toLocaleDateString();
             const reportId = `HD-${Math.floor(Math.random() * 10000)}`;
-            doc.text(`Date: ${reportDate}`, margin, 35);
-            doc.text(`Report ID: ${reportId}`, margin, 40);
+            doc.text(`Date: ${reportDate} | Report ID: ${reportId}`, margin, 22);
             
-            // Add patient information
+            // Add patient information - more compact layout
             const patientId = document.getElementById('patientid').value || 'Not provided';
             const patientAge = document.getElementById('age').value;
             const patientGender = document.getElementById('gender').options[document.getElementById('gender').selectedIndex].text;
             
-            doc.setFontSize(14);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Patient Information', margin, 50);
             doc.setFontSize(11);
-            doc.setFont('helvetica', 'normal');
-            doc.text(`Patient ID: ${patientId}`, margin, 58);
-            doc.text(`Age: ${patientAge}`, margin, 64);
-            doc.text(`Gender: ${patientGender}`, margin, 70);
-            
-            // Add assessment result
-            doc.setFontSize(14);
             doc.setFont('helvetica', 'bold');
-            doc.text('Assessment Result', margin, 80);
+            doc.text('Patient Information', margin, 30);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`ID: ${patientId} | Age: ${patientAge} | Gender: ${patientGender}`, margin, 36);
+            
+            // Add assessment result with compact layout
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Assessment Result', margin, 44);
             
             const predictionText = resultMessage.textContent;
             const probabilityText = resultProbability.textContent;
             
-            // Add colored box for risk level
+            // Add colored box for risk level - more compact
             if (predictionText.includes('High risk')) {
-                doc.setFillColor(231, 76, 60); // Red for high risk
+                doc.setFillColor(220, 53, 69); // Red for high risk
             } else {
-                doc.setFillColor(46, 204, 113); // Green for low risk
+                doc.setFillColor(40, 167, 69); // Green for low risk
             }
-            doc.roundedRect(margin, 84, contentWidth, 20, 3, 3, 'F');
+            doc.roundedRect(margin, 47, contentWidth, 12, 2, 2, 'F'); // Smaller height
             
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(12);
-            doc.text(predictionText, pageWidth / 2, 94, { align: 'center' });
-            doc.text(probabilityText, pageWidth / 2, 100, { align: 'center' });
+            doc.setFontSize(10);
+            doc.text(`${predictionText} | ${probabilityText}`, pageWidth / 2, 54, { align: 'center' });
             doc.setTextColor(0, 0, 0);
-
-            // Now we'll capture various elements of the page using html2canvas and add them to the PDF
             
-            // First, let's capture the risk meter
-            html2canvas(document.getElementById('risk-visualizer'), {
-                scale: 2,
-                logging: false,
-                useCORS: true
-            }).then(riskCanvas => {
-                const riskMeterImgData = riskCanvas.toDataURL('image/png');
+            // Get risk percentage from the probability
+            const riskPercentage = parseFloat(probabilityText.match(/\d+\.\d+/)[0]);
+            
+            // Add contributing factors section - more compact
+            let yPos = 65;
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Key Contributing Factors', margin, yPos);
+            yPos += 6;
+            
+            // Extract factors from the DOM
+            const factorItems = document.querySelectorAll('.factor-item');
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            
+            factorItems.forEach((item, index) => {
+                const factorName = item.querySelector('.factor-name').textContent;
+                const factorDesc = item.querySelector('.factor-description').textContent;
                 
-                doc.addPage();
-                doc.setFillColor(41, 128, 185);
-                doc.rect(0, 0, pageWidth, 25, 'F');
-                doc.setTextColor(255, 255, 255);
-                doc.setFontSize(16);
-                doc.text('Risk Assessment Visualization', pageWidth / 2, 15, { align: 'center' });
+                // Use bullet points for compact listing
+                doc.text(`• ${factorName}: ${factorDesc}`, margin, yPos);
+                yPos += 5; // Reduced line spacing
                 
-                doc.setTextColor(0, 0, 0);
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Risk Meter', margin, 35);
-                
-                // Add the risk meter image
-                doc.addImage(riskMeterImgData, 'PNG', margin, 40, contentWidth, 70);
-                
-                // Now capture the risk interpretation
-                html2canvas(document.getElementById('risk-interpretation'), {
-                    scale: 2,
-                    logging: false,
-                    useCORS: true
-                }).then(interpretationCanvas => {
-                    const interpretationImgData = interpretationCanvas.toDataURL('image/png');
-                    
-                    doc.text('Risk Interpretation', margin, 120);
-                    doc.addImage(interpretationImgData, 'PNG', margin, 125, contentWidth, 50);
-                    
-                    // Now capture contributing factors
-                    html2canvas(document.querySelector('.contributing-factors'), {
-                        scale: 2,
-                        logging: false,
-                        useCORS: true
-                    }).then(factorsCanvas => {
-                        const factorsImgData = factorsCanvas.toDataURL('image/png');
-                        
-                        doc.addPage();
-                        doc.setFillColor(41, 128, 185);
-                        doc.rect(0, 0, pageWidth, 25, 'F');
-                        doc.setTextColor(255, 255, 255);
-                        doc.setFontSize(16);
-                        doc.text('Contributing Factors', pageWidth / 2, 15, { align: 'center' });
-                        
-                        doc.setTextColor(0, 0, 0);
-                        doc.setFontSize(14);
-                        doc.setFont('helvetica', 'bold');
-                        doc.text('Key Contributing Factors', margin, 35);
-                        
-                        doc.addImage(factorsImgData, 'PNG', margin, 40, contentWidth, 100);
-                        
-                        // Now capture risk comparison
-                        html2canvas(document.querySelector('.comparison-chart'), {
-                            scale: 2,
-                            logging: false,
-                            useCORS: true
-                        }).then(comparisonCanvas => {
-                            const comparisonImgData = comparisonCanvas.toDataURL('image/png');
-                            
-                            doc.text('Risk Comparison', margin, 150);
-                            doc.addImage(comparisonImgData, 'PNG', margin, 155, contentWidth, 80);
-                            
-                            // Now capture recommendations
-                            html2canvas(document.getElementById('recommendations'), {
-                                scale: 2,
-                                logging: false,
-                                useCORS: true
-                            }).then(recommendationsCanvas => {
-                                const recommendationsImgData = recommendationsCanvas.toDataURL('image/png');
-                                
-                                doc.addPage();
-                                doc.setFillColor(41, 128, 185);
-                                doc.rect(0, 0, pageWidth, 25, 'F');
-                                doc.setTextColor(255, 255, 255);
-                                doc.setFontSize(16);
-                                doc.text('Personalized Recommendations', pageWidth / 2, 15, { align: 'center' });
-                                
-                                doc.setTextColor(0, 0, 0);
-                                doc.setFontSize(14);
-                                doc.setFont('helvetica', 'bold');
-                                doc.text('Recommendations', margin, 35);
-                                
-                                doc.addImage(recommendationsImgData, 'PNG', margin, 40, contentWidth, 180);
-                                
-                                // Add disclaimer
-                                doc.setFont('helvetica', 'italic');
-                                doc.setFontSize(9);
-                                const disclaimer = 'Disclaimer: This report is for informational purposes only and does not constitute medical advice. Always consult with your healthcare provider for proper diagnosis and treatment.';
-                                const splitDisclaimer = doc.splitTextToSize(disclaimer, contentWidth);
-                                
-                                // Add disclaimer and page numbers to all pages
-                                const pageCount = doc.getNumberOfPages();
-                                for (let i = 1; i <= pageCount; i++) {
-                                    doc.setPage(i);
-                                    doc.setFont('helvetica', 'italic');
-                                    doc.setFontSize(9);
-                                    doc.text(splitDisclaimer, margin, 270);
-                                    
-                                    doc.setFont('helvetica', 'normal');
-                                    doc.setFontSize(10);
-                                    doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, 280, { align: 'center' });
-                                }
-                                
-                                // Save the PDF
-                                const fileName = `Heart_Health_Assessment_${patientId || reportId}.pdf`;
-                                doc.save(fileName);
-                                
-                                // Remove loading message
-                                document.body.removeChild(loadingMessage);
-                            });
-                        });
-                    });
-                });
-            }).catch(error => {
-                console.error('Error generating PDF:', error);
-                alert('Error generating PDF. Please try again.');
-                document.body.removeChild(loadingMessage);
+                // Add a small gap after every 3 factors or after the last one
+                if ((index + 1) % 3 === 0 || index === factorItems.length - 1) {
+                    yPos += 2;
+                }
             });
+            
+            // Add recommendations section - more compact
+            yPos += 3;
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Recommendations', margin, yPos);
+            yPos += 6;
+            
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            
+            // Extract recommendations from the DOM in a condensed format
+            const lifestyleItems = document.querySelectorAll('#lifestyle-changes li');
+            const monitoringItems = document.querySelectorAll('#monitoring-steps li');
+            const medicalItems = document.querySelectorAll('#medical-advice li');
+            
+            // Lifestyle recommendations
+            if (lifestyleItems.length > 0) {
+                doc.setFont('helvetica', 'bold');
+                doc.text('Lifestyle:', margin, yPos);
+                doc.setFont('helvetica', 'normal');
+                yPos += 5;
+                
+                lifestyleItems.forEach(item => {
+                    doc.text(`• ${item.textContent}`, margin + 3, yPos);
+                    yPos += 5;
+                });
+            }
+            
+            // Monitoring recommendations
+            if (monitoringItems.length > 0) {
+                doc.setFont('helvetica', 'bold');
+                doc.text('Monitoring:', margin, yPos);
+                doc.setFont('helvetica', 'normal');
+                yPos += 5;
+                
+                monitoringItems.forEach(item => {
+                    doc.text(`• ${item.textContent}`, margin + 3, yPos);
+                    yPos += 5;
+                });
+            }
+            
+            // Medical recommendations
+            if (medicalItems.length > 0) {
+                doc.setFont('helvetica', 'bold');
+                doc.text('Medical:', margin, yPos);
+                doc.setFont('helvetica', 'normal');
+                yPos += 5;
+                
+                medicalItems.forEach(item => {
+                    doc.text(`• ${item.textContent}`, margin + 3, yPos);
+                    yPos += 5;
+                });
+            }
+            
+            // Add risk comparison chart
+            yPos += 5;
+            doc.setFont('helvetica', 'bold');
+            doc.text('Risk Comparison', margin, yPos);
+            yPos += 6;
+            
+            // Draw a horizontal risk meter
+            const barWidth = contentWidth;
+            const barHeight = 8;
+            const barX = margin;
+            const barY = yPos;
+            
+            // Background bar
+            doc.setFillColor(230, 230, 230);
+            doc.rect(barX, barY, barWidth, barHeight, 'F');
+            
+            // Risk level bar
+            if (riskPercentage > 70) {
+                doc.setFillColor(220, 53, 69); // Red for high risk
+            } else if (riskPercentage > 30) {
+                doc.setFillColor(255, 193, 7); // Yellow for moderate risk
+            } else {
+                doc.setFillColor(40, 167, 69); // Green for low risk
+            }
+            
+            const riskWidth = (riskPercentage / 100) * barWidth;
+            doc.rect(barX, barY, riskWidth, barHeight, 'F');
+            
+            // Risk labels
+            yPos += barHeight + 5;
+            doc.setFontSize(7);
+            doc.text('0%', barX, yPos);
+            doc.text('50%', barX + barWidth/2, yPos, { align: 'center' });
+            doc.text('100%', barX + barWidth, yPos, { align: 'right' });
+            
+            // Add disclaimer at bottom of page
+            yPos = pageHeight - 15;
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'italic');
+            doc.text('Disclaimer: This assessment is for informational purposes only and is not a substitute for professional medical advice.', pageWidth/2, yPos, { align: 'center' });
+            yPos += 4;
+            doc.text('Always consult with a qualified healthcare provider regarding any medical condition.', pageWidth/2, yPos, { align: 'center' });
+            
+            // Add current date and time
+            const now = new Date();
+            const dateTimeString = now.toLocaleString();
+            yPos += 4;
+            doc.text(`Generated on: ${dateTimeString}`, pageWidth/2, yPos, { align: 'center' });
+            
+            // Save the PDF
+            doc.save(`Heart_Assessment_${reportDate.replace(/\//g, '-')}.pdf`);
+            
+            // Remove loading message
+            document.body.removeChild(loadingMessage);
+            
         } catch (error) {
             console.error('Error generating PDF:', error);
             alert('Error generating PDF. Please try again.');

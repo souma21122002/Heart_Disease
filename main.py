@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import pickle
 import numpy as np
 import os
+import uvicorn
 from dotenv import load_dotenv
 load_dotenv()
 # Add email functionality
@@ -397,4 +398,5 @@ def send_email():
         return jsonify({'error': str(e), 'success': False}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)

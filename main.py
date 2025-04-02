@@ -16,7 +16,13 @@ from email import encoders
 import base64
 import re
 
+# Add WSGI to ASGI adapter
+from asgiref.wsgi import WsgiToAsgiApplication
+
 app = Flask(__name__)
+
+# Create an ASGI application
+asgi_app = WsgiToAsgiApplication(app)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -398,5 +404,8 @@ def send_email():
         return jsonify({'error': str(e), 'success': False}), 500
 
 if __name__ == '__main__':
-
-    uvicorn.run(app, host="0.0.0.0", debug=True)
+    # For development only
+    app.run(host="0.0.0.0", debug=True)
+    
+    # Don't run Uvicorn here when using Gunicorn
+    # uvicorn.run(app, host="0.0.0.0", debug=True)

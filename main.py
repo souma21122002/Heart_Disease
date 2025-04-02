@@ -16,13 +16,13 @@ from email import encoders
 import base64
 import re
 
-# Add WSGI to ASGI adapter
-from asgiref.wsgi import WsgiToAsgiApplication
+# Add WSGI to ASGI adapter - fix the import
+from asgiref.wsgi import WsgiToAsgi
 
 app = Flask(__name__)
 
-# Create an ASGI application
-asgi_app = WsgiToAsgiApplication(app)
+# Create an ASGI application with the correct class name
+asgi_app = WsgiToAsgi(app)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

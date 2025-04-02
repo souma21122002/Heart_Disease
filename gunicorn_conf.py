@@ -7,16 +7,11 @@ workers = multiprocessing.cpu_count() * 2 + 1
 # Socket to bind
 bind = "0.0.0.0:10000"
 
-# Worker class - using Uvicorn's worker
-worker_class = "uvicorn.workers.UvicornWorker"
+# Use the standard sync worker instead of Uvicorn
+worker_class = "sync"
 
-# Application object - point to the ASGI app
-wsgi_app = "main:asgi_app"
+# Application object - point directly to the Flask app
+wsgi_app = "main:app"
 
 # Timeout settings
 timeout = 120
-
-# Log settings
-loglevel = "info"
-accesslog = "-"
-errorlog = "-"
